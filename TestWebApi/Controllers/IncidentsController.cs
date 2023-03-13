@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using TestWebApi.Core.Interfaces;
 using TestWebApi.Core.Models;
 using TestWebApi.Data.ViewModels;
+using TestWebApi.Services.Interfaces;
 
 namespace TestWebApi.Controllers
 {
@@ -10,15 +11,19 @@ namespace TestWebApi.Controllers
     [ApiController]
     public class IncidentsController : ControllerBase
     {
-        private readonly IUnitOfWork _unitOfWork;
-        public IncidentsController(IUnitOfWork unitOfWork)
+        private readonly IIncidentService _incidentService;
+        private readonly IAccountService _accountService;
+        private readonly IContactService _contactService;
+        public IncidentsController(IIncidentService incidentService, IAccountService accountService, IContactService contactService)
         {
-            _unitOfWork = unitOfWork;
+            _incidentService = incidentService;
+            _accountService = accountService;
+            _contactService = contactService;
         }
         [HttpGet]
         public IActionResult GetIncidents()
         {
-            return Ok(_unitOfWork.GenericRepository<Incident>().GetWithInclude(i => i.Accounts));
+            return Ok(_incidentService.GetIncidentsWithAccounts());
         }
         [HttpPost]
         public IActionResult AddIncident(IncidentAddViewModel incident)
@@ -27,35 +32,20 @@ namespace TestWebApi.Controllers
             {
                 return BadRequest("Invalid data");
             }
-            foreach (AccountAddViewModel account in incident.Accounts)
+            if(!_accountService.CheckIfAllAccountsExist(incident.Accounts))
             {
-                var existing_account = _unitOfWork.GenericRepository<Account>().Get(a => a.Name == account.Name).FirstOrDefault();
-                if (existing_account == null)
-                {
-                    return NotFound();
-                }
+                return NotFound();
             }
             List<Account> accounts = new List<Account>();
             foreach(AccountAddViewModel account in incident.Accounts)
             {
-                var existing_account = _unitOfWork.GenericRepository<Account>().Get(a => a.Name == account.Name).FirstOrDefault();
-                foreach(Contact contact in account.Contacts)
-                {
-                    var existing_contact = _unitOfWork.GenericRepository<Contact>().Get(c => c.Email == contact.Email).FirstOrDefault();
-                    if (existing_contact == null)
-                    {
-                        _unitOfWork.GenericRepository<Contact>().Add(contact);
-                    }
-                    else
-                    {
-                        _unitOfWork.GenericRepository<Contact>().Update(contact);
-                    }
-                }
+                var existing_account = _accountService.GetAccountsByName(account.Name).FirstOrDefault();
+                _contactService.AddOrUpdateContactWhileAddingAccount(account.Contacts);
                 existing_account.Contacts = account.Contacts;
-                _unitOfWork.GenericRepository<Account>().Update(existing_account);
+                _accountService.UpdateAccountWhileAddingIncident(existing_account);
                 accounts.Add(existing_account);
             }
-            _unitOfWork.GenericRepository<Incident>().Add(new Incident() { Accounts = accounts, Description = incident.Description });
+            _incidentService.AddIncident(new Incident() { Accounts = accounts, Description = incident.Description });
             return Ok();
         }
     }

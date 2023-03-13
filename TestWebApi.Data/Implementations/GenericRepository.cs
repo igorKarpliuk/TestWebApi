@@ -28,6 +28,10 @@ namespace TestWebApi.Data.Implementations
             _dbContext.Entry(entity).State = EntityState.Modified;
             _dbContext.SaveChanges();
         }
+        public IEnumerable<TEntity> GetAll()
+        {
+            return _DbSet.AsNoTracking();
+        }
         public IEnumerable<TEntity> Get(Func<TEntity, bool> predicate)
         {
             return _DbSet.AsNoTracking().Where(predicate);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using TestWebApi.Core.Interfaces;
 using TestWebApi.Core.Models;
+using TestWebApi.Services.Interfaces;
 
 namespace TestWebApi.Controllers
 {
@@ -10,15 +11,15 @@ namespace TestWebApi.Controllers
     [ApiController]
     public class ContactsController : ControllerBase
     {
-        private readonly IUnitOfWork _unitOfWork;
-        public ContactsController(IUnitOfWork unitOfWork)
+        private readonly IContactService _contactService;
+        public ContactsController(IContactService contactService)
         {
-            _unitOfWork = unitOfWork;
+            _contactService = contactService;
         }
         [HttpGet]
         public IActionResult GetContacts()
         {
-            return Ok(_unitOfWork.GenericRepository<Contact>().GetAll());
+            return Ok(_contactService.AllContacts());
         }
         [HttpPost]
         public IActionResult AddContact(Contact contact)
@@ -27,11 +28,11 @@ namespace TestWebApi.Controllers
             {
                 return BadRequest("Invalid data");
             }
-            if (_unitOfWork.GenericRepository<Contact>().Get(c => c.Email == contact.Email).Count() != 0)
+            if (_contactService.GetContactsCountWithEmail(contact.Email) != 0)
             {
                 return BadRequest("There is another contact with current email!");
             }
-            _unitOfWork.GenericRepository<Contact>().Add(contact);
+            _contactService.AddContact(contact);
             return Ok();
         }
     }

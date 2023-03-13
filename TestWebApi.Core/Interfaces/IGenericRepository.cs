@@ -11,6 +11,7 @@ namespace TestWebApi.Core.Interfaces
     {
         void Add(TEntity entity);
         void Update(TEntity entity);
+        IEnumerable<TEntity> GetAll();
         IEnumerable<TEntity> Get(Func<TEntity, bool> predicate);
         IEnumerable<TEntity> GetWithInclude(params Expression<Func<TEntity, object>>[] includeProperties);
     }
